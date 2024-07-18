@@ -8,6 +8,33 @@ export interface Message {
   content: string
 }
 
+// export async function POST(req: NextRequest) {
+//   try {
+//     const { prompt, messages, input } = (await req.json()) as {
+//       prompt: string
+//       messages: Message[]
+//       input: string
+//     }
+//     const messagesWithHistory = [
+//       { content: prompt, role: 'system' },
+//       ...messages,
+//       { content: input, role: 'user' }
+//     ]
+
+//     const { apiUrl, apiKey, model } = getApiConfig()
+//     const stream = await getOpenAIStream(apiUrl, apiKey, model, messagesWithHistory)
+//     return new NextResponse(stream, {
+//       headers: { 'Content-Type': 'text/event-stream' }
+//     })
+//   } catch (error) {
+//     console.error(error)
+//     return NextResponse.json(
+//       { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
+//       { status: 500 }
+//     )
+//   }
+// }
+
 export async function POST(req: NextRequest) {
   try {
     const { prompt, messages, input } = (await req.json()) as {
@@ -21,10 +48,11 @@ export async function POST(req: NextRequest) {
       { content: input, role: 'user' }
     ]
 
-    const { apiUrl, apiKey, model } = getApiConfig()
-    const stream = await getOpenAIStream(apiUrl, apiKey, model, messagesWithHistory)
-    return new NextResponse(stream, {
-      headers: { 'Content-Type': 'text/event-stream' }
+    const localPort = process.env.LOCAL_PORT ? process.env.LOCAL_PORT : "10203"
+    const caseID = process.env.CASE_ID ? process.env.CASE_ID : "test"
+    const msgRespnse = await getLocalChat(localPort, caseID, messagesWithHistory)
+    return new NextResponse(msgRespnse, {
+      headers: { 'Content-Type': 'application/json' }
     })
   } catch (error) {
     console.error(error)
@@ -135,6 +163,67 @@ const getOpenAIStream = async (
         const str = decoder.decode(chunk).replace('[DONE]\n', '[DONE]\n\n')
         parser.feed(str)
       }
+    }
+  })
+}
+
+const getLocalChat = async (
+  localPort: string,
+  caseID: string,
+  messages: Message[]
+) => {
+  const apiUrl = "http://localhost:"+localPort+"/inspector/"+caseID+"/chat"
+  const encoder = new TextEncoder()
+  const decoder = new TextDecoder()
+
+  const res = await fetch(apiUrl, {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    method: 'POST',
+    body: JSON.stringify({
+      frequency_penalty: 0,
+      max_tokens: 4000,
+      messages: messages,
+      presence_penalty: 0,
+      stream: true,
+      temperature: 0.5,
+      top_p: 0.95
+    })
+  })
+
+  if (res.status !== 200) {
+    const statusText = res.statusText
+    const responseBody = await res.text()
+    console.error(`OpenAI API response error: ${responseBody}`)
+    throw new Error(
+      `The OpenAI API has encountered an error with a status code of ${res.status} ${statusText}: ${responseBody}`
+    )
+  }
+
+  return new ReadableStream({
+    async start(controller) {
+
+      for await (const chunk of res.body as any) {
+        // An extra newline is required to make AzureOpenAI work.
+        const chunk_str = decoder.decode(chunk)
+        // parser.feed(str)
+        const res_json = JSON.parse(chunk_str)
+        try {
+          const msg = res_json["message"]
+          if (msg !== undefined) {
+            const queue = encoder.encode(msg)
+            controller.enqueue(queue)
+          } else {
+            console.error('Received undefined content:', msg)
+          }
+        } catch (e) {
+          console.error('Error parsing event data:', e)
+          controller.error(e)
+        }
+      }
+      controller.close()
+      return
     }
   })
 }
