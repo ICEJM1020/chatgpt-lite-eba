@@ -15,6 +15,7 @@ export interface Persona {
 
 export interface Chat {
   id: string
+  name: string
   persona?: Persona
   messages?: ChatMessage[]
 }

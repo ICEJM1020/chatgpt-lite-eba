@@ -160,8 +160,14 @@ const Chat = (props: ChatProps, ref: any) => {
   )
 
   const clearMessages = () => {
-    conversation.current = []
-    forceUpdate?.()
+    const enteredPassword = window.prompt("Please enter the password:");
+
+    if (enteredPassword === process.env.NEXT_PUBLIC_ADMIN_KEY) {
+      conversation.current = []
+      forceUpdate?.()
+    } else {
+      alert("Incorrect password.");
+    }
   }
 
   useEffect(() => {
@@ -214,7 +220,7 @@ const Chat = (props: ChatProps, ref: any) => {
         px="4"
         style={{ backgroundColor: 'var(--gray-a2)' }}
       >
-        <Heading size="4">{currentChatRef?.current?.persona?.name || 'None'}</Heading>
+        <Heading size="4">{currentChatRef?.current?.persona?.name || 'None'} {currentChatRef?.current?.name}</Heading>
       </Flex>
       <ScrollArea
         className="flex-1 px-4"

@@ -115,9 +115,17 @@ const useChatHook = () => {
 
   const onCreateChat = useCallback(
     (persona: Persona) => {
+      const currentDateTime = new Date();
+      const chatName = currentDateTime
+        .toISOString()
+        .replace(/T/, '_')  // Replace the T separator with an underscore
+        .replace(/:/g, '-') // Replace colons with dashes
+        .split('.')[0];     // Remove milliseconds
+
       const id = uuid()
       const newChat: Chat = {
         id,
+        name: chatName,
         persona: persona
       }
 
@@ -136,15 +144,84 @@ const useChatHook = () => {
   }, [])
 
   const onDeleteChat = (chat: Chat) => {
-    const index = chatList.findIndex((item) => item.id === chat.id)
-    chatList.splice(index, 1)
-    setChatList([...chatList])
-    localStorage.removeItem(`ms_${chat.id}`)
-    if (currentChatRef.current?.id === chat.id) {
-      currentChatRef.current = chatList[0]
+    const enteredPassword = window.prompt("Please enter the password:");
+
+    if (enteredPassword === process.env.NEXT_PUBLIC_ADMIN_KEY) {
+      const index = chatList.findIndex((item) => item.id === chat.id)
+      chatList.splice(index, 1)
+      setChatList([...chatList])
+      localStorage.removeItem(`ms_${chat.id}`)
+      if (currentChatRef.current?.id === chat.id) {
+        currentChatRef.current = chatList[0]
+      }
+      if (chatList.length === 0) {
+        onOpenPersonaPanel('chat')
+      }
+    } else {
+      alert("Incorrect password.");
     }
-    if (chatList.length === 0) {
+  }
+
+  const onExportChat = (chat: Chat) => {
+    const enteredPassword = window.prompt("Please enter the password:");
+
+    if (enteredPassword === process.env.NEXT_PUBLIC_ADMIN_KEY) {
+      const data = localStorage.getItem(`ms_${chat?.id}`);
+      if (data){
+        const jsonBlob = new Blob([data], { type: "application/json" });
+    
+        const url = URL.createObjectURL(jsonBlob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${chat?.name}.json`;
+    
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }
+    } else {
+      alert("Incorrect password.");
+    }
+  }
+
+  const onClearChatList = () => {
+    const enteredPassword = window.prompt("Please enter the password:");
+
+    if (enteredPassword === process.env.NEXT_PUBLIC_ADMIN_KEY) {
+      chatList.forEach( (item) => {
+        localStorage.removeItem(`ms_${item.id}`)
+      })
+      setChatList([])
       onOpenPersonaPanel('chat')
+    } else {
+      alert("Incorrect password.");
+    }
+  }
+
+  const onSaveChatList = () => {
+    const enteredPassword = window.prompt("Please enter the password:");
+    var allChat: { [id: string] : Object; } = {};
+    if (enteredPassword === process.env.NEXT_PUBLIC_ADMIN_KEY) {
+      chatList.forEach( (item) => {
+        const data = localStorage.getItem(`ms_${item?.id}`);
+        if (data){
+          allChat[item?.name] = data;
+        }
+      })
+
+      const jsonBlob = new Blob([JSON.stringify(allChat)], { type: "application/json" });
+      const url = URL.createObjectURL(jsonBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `history.json`;
+  
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } else {
+      alert("Incorrect password.");
     }
   }
 
@@ -278,11 +355,14 @@ const useChatHook = () => {
     onClosePersonaModal,
     onCreateChat,
     onDeleteChat,
+    onExportChat,
     onChangeChat,
     onCreatePersona,
     onDeletePersona,
     onEditPersona,
     saveMessages,
+    onClearChatList,
+    onSaveChatList,
     onOpenPersonaPanel,
     onClosePersonaPanel,
     onToggleSidebar,

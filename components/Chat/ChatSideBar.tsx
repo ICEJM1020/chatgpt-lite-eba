@@ -3,10 +3,10 @@
 import React, { useContext } from 'react'
 import { Box, Flex, IconButton, ScrollArea, Text } from '@radix-ui/themes'
 import cs from 'classnames'
-import { AiOutlineCloseCircle } from 'react-icons/ai'
+import { AiOutlineCloseCircle, AiOutlineDownload } from 'react-icons/ai'
 import { BiMessageDetail } from 'react-icons/bi'
 import { FiPlus } from 'react-icons/fi'
-import { RiRobot2Line } from 'react-icons/ri'
+import { RiProhibitedLine, RiExternalLinkFill} from 'react-icons/ri'
 import ChatContext from './chatContext'
 
 import './index.scss'
@@ -20,7 +20,9 @@ export const ChatSideBar = () => {
     onDeleteChat,
     onChangeChat,
     onCreateChat,
-    onOpenPersonaPanel
+    onExportChat,
+    onClearChatList,
+    onSaveChatList,
   } = useContext(ChatContext)
 
   return (
@@ -51,31 +53,56 @@ export const ChatSideBar = () => {
                     {chat.persona?.name}
                   </Text>
                 </Flex>
-                <IconButton
-                  size="2"
-                  className="cursor-pointer"
-                  variant="ghost"
-                  color="gray"
-                  radius="full"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onDeleteChat?.(chat)
-                  }}
-                >
-                  <AiOutlineCloseCircle className="size-4" />
-                </IconButton>
+                <Flex gap="2" align="center">
+                  <IconButton
+                    size="2"
+                    className="cursor-pointer"
+                    variant="ghost"
+                    color="gray"
+                    radius="full"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onExportChat?.(chat)
+                    }}
+                  >
+                    <AiOutlineDownload className="size-4" />
+                  </IconButton>
+                  <IconButton
+                    size="2"
+                    className="cursor-pointer"
+                    variant="ghost"
+                    color="gray"
+                    radius="full"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onDeleteChat?.(chat)
+                    }}
+                  >
+                    <AiOutlineCloseCircle className="size-4" />
+                  </IconButton>
+                </Flex>
               </Box>
             ))}
           </Flex>
         </ScrollArea>
-        {/* <Box
-          width="auto"
-          onClick={() => onOpenPersonaPanel?.('chat')}
-          className="bg-token-surface-primary active:scale-95 cursor-pointer"
-        >
-          <RiRobot2Line className="size-4" />
-          <Text>Persona Store</Text>
-        </Box> */}
+        <Flex className="p-2 overflow-hidden w-64" direction="row" gap="3" align="center">
+          <Box
+            width="auto"
+            onClick={() => onSaveChatList?.()}
+            className="bg-token-surface-primary active:scale-95 cursor-pointer"
+          >
+            <RiExternalLinkFill className="size-4" />
+            <Text>Export</Text>
+          </Box>
+          <Box
+            width="auto"
+            onClick={() => onClearChatList?.()}
+            className="bg-token-surface-primary active:scale-95 cursor-pointer"
+          >
+            <RiProhibitedLine className="size-4" />
+            <Text>Clear</Text>
+          </Box>
+        </Flex>
       </Flex>
     </Flex>
   )
